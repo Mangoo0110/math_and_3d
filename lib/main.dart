@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:math_and_3d/core/themes/themes.dart';
 
@@ -38,14 +39,80 @@ class TheRealm extends StatefulWidget {
 
 class _TheRealmState extends State<TheRealm> {
   Timer? timer;
-  double depth = 1;
+  static const int frameRate = 60;
+  double dz = 1/frameRate;
+  double depth = 0;
+
+
+
+  List<Vec3> threeDpoints = [
+    Vec3(.5, .5, 0.5),
+    Vec3(-.5, .5, 0.5),
+    Vec3(.5, -.5, 0.5),
+    Vec3(-.5, -.5, 0.5),
+
+    Vec3(.5, .5, -0.1),
+    Vec3(-.5, .5, -0.1),
+    Vec3(.5, -.5, -0.1),
+    Vec3(-.5, -.5, -0.1),
+  ];
+
+  List<SquareDotValue> toSquareDots(List<Vec2> points) {
+    return points.map((e) => SquareDotValue(Vec2(e.x, e.y))).toList();
+  }
+
+  List<Vec2> project3dTo2dAll(List<Vec3> points) {
+    return points.map((e) => project3dTo2d(e)).toList();
+  }
+
+  List<Vec3> translateZ(List<Vec3> points, double dz) {
+    for (var e in points) {
+      e.z += dz;
+    }
+    return points;
+  }
+
+  // Simplified formula from: 3d: (x, y, z) => 2d: (x/z, y/z)
+  // Which is essentially derived from similar triangle theorem
+  //
+  /// Below videos sources explains the formula behind 3d coordinates to 2d coordinates much better: 
+  /// https://youtu.be/eoXn6nwV694?si=hOaW5FIAczj45jzD
+  /// https://youtu.be/qjWkNZ0SXfo?si=gYZLzm_ht9McmHW7
+  ///
+  // More detailed formula is: 
+  // 3d: (x, y, z) => 2d: (x/(z * tan(theta)), y/(z * tan(theta))) 
+  //
+  // Here z is the depth or how far behind the object is from the screen.
+  // Minimum depth z is 0.1 to avoid division by zero
+  Vec2 project3dTo2d(Vec3 coooridanates) {
+    return Vec2(
+      coooridanates.x / coooridanates.z,
+      coooridanates.y / coooridanates.z
+    );
+  }
+
+  Vec2 translateToScreenPoint(Vec2 coordinate) {
+    // Assuming that coordinate values are between -1 and 1
+    // (0,0) is the middle point of the plane
+    return Vec2(
+      (1 - coordinate.x)/2 * widget.screenSize.width,
+      (1 - coordinate.y)/2 * widget.screenSize.height
+    );
+  }
+
+  List<Vec2> translateToScreenPoints(List<Vec2> coordinates) {
+    return coordinates.map((e) => translateToScreenPoint(e)).toList();
+  }
+
+
 
   @override
   void initState() {
+    double frame = 0;
     timer = Timer.periodic(Duration(milliseconds: (1000/60).floor()), (timer) {
-      depth += 1/60;
-      if(depth >= 10) {
-        timer.cancel();
+      frame += 1;
+      depth += dz;
+      if(frame >= frameRate * 3) {
         return;
       }
       setState(() {
@@ -76,7 +143,7 @@ class _TheRealmState extends State<TheRealm> {
                 Positioned(
                   top: 10,
                   left: 0,
-                  child: Text(depth.toString(), style: const TextStyle(color: Colors.white),),
+                  child: Text((depth).toString(), style: const TextStyle(color: Colors.white),),
                 ),
                   Positioned(
                     left: widget.screenSize.width/2,
@@ -87,21 +154,13 @@ class _TheRealmState extends State<TheRealm> {
                     ),
                   ),
                     
-                drawRectPoint(
-                  translateToScreenPoint(project3dTo2d(Vec3(.5, .5, depth)))
-                ),
-
-                drawRectPoint(
-                  translateToScreenPoint(project3dTo2d(Vec3(.5, -.5, depth)))
-                ),
-
-                drawRectPoint(
-                  translateToScreenPoint(project3dTo2d(Vec3(-.5, .5, depth)))
-                ),
-
-                drawRectPoint(
-                  translateToScreenPoint(project3dTo2d(Vec3(-.5, -.5, depth)))
-                ),
+                CustomPaint(
+                  painter: DrawSquareDots(
+                    dots: toSquareDots(
+                      translateToScreenPoints(project3dTo2dAll(translateZ(threeDpoints, dz))),
+                    ),
+                  ),
+                )
               ],
             ),
           )
@@ -109,33 +168,7 @@ class _TheRealmState extends State<TheRealm> {
       },
     );
   }
-  // Simplified formula from: 3d: (x, y, z) => 2d: (x/z, y/z)
-  // Which is essentially derived from similar triangle theorem
-  //
-  /// Below videos sources explains the formula behind 3d coordinates to 2d coordinates much better: 
-  /// https://youtu.be/eoXn6nwV694?si=hOaW5FIAczj45jzD
-  /// https://youtu.be/qjWkNZ0SXfo?si=gYZLzm_ht9McmHW7
-  ///
-  // More detailed formula is: 
-  // 3d: (x, y, z) => 2d: (x/(z * tan(theta)), y/(z * tan(theta))) 
-  //
-  // Here z is the depth or how far behind the object is from the screen.
-  // Minimum depth z is 0.1 to avoid division by zero
-  Vec2 project3dTo2d(Vec3 coooridanates) {
-    return Vec2(
-      coooridanates.x / (max(0.1, coooridanates.z)),
-      coooridanates.y / (max(0.1, coooridanates.z))
-    );
-  }
-
-  Vec2 translateToScreenPoint(Vec2 coordinate) {
-    // Assuming that coordinate values are between -1 and 1
-    // (0,0) is the middle point of the plane
-    return Vec2(
-      (1 - coordinate.x)/2 * widget.screenSize.width,
-      (1 - coordinate.y)/2 * widget.screenSize.height
-    );
-  }
+  
 }
 
 
@@ -178,9 +211,9 @@ class Vec2{
 class Vec3{
   Vec3(this.x, this.y, this.z);
 
-  final double x;
-  final double y;
-  final double z;
+  double x;
+  double y;
+  double z;
 
   Vec3 operator +(Vec3 other) => Vec3(x + other.x, y + other.y, z + other.z);
   Vec3 operator -(Vec3 other)=> Vec3(x- other.x, y - other.y, z - other.z);
@@ -189,7 +222,7 @@ class Vec3{
   bool operator ==(Object other) {
     return identical(this, other) 
       && other is Vec3
-      &&  runtimeType ==  other.runtimeType
+      && runtimeType ==  other.runtimeType
       && x == other.x
       && y == other.y
       && z == other.z;
@@ -202,7 +235,7 @@ class Vec3{
 
 
 class SquareDotPainter extends CustomPainter {
-  const SquareDotPainter({this.color = Colors.green, required this.coordinate});
+  const SquareDotPainter({this.color = Colors.greenAccent, required this.coordinate});
 
   final Color color;
   final Vec2 coordinate;
@@ -210,12 +243,48 @@ class SquareDotPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final double squareLen = 10;
-    final rect = Rect.fromLTWH(coordinate.x - squareLen/2, coordinate.y - squareLen/2, squareLen, squareLen);
+    final rect = Rect.fromLTWH(
+      coordinate.x - squareLen / 2,
+      coordinate.y - squareLen / 2,
+      squareLen,
+      squareLen,
+    );
     canvas.drawRect(rect, Paint()..color = color);
   }
   
   @override
   bool shouldRepaint(covariant SquareDotPainter oldDelegate) {
     return color != oldDelegate.color || coordinate != oldDelegate.coordinate;
+  }
+}
+
+
+
+class SquareDotValue {
+  final Vec2 coordinate;
+  final Color color;
+  SquareDotValue(this.coordinate, [this.color = Colors.greenAccent]);
+}
+
+class DrawSquareDots extends CustomPainter {
+  const DrawSquareDots({required this.dots});
+
+  final List<SquareDotValue> dots;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var dot in dots) {
+      final double squareLen = 10;
+      final color = dot.color;
+      final coordinate = dot.coordinate;
+      final rect = Rect.fromLTWH(coordinate.x - squareLen/2, coordinate.y - squareLen/2, squareLen, squareLen);
+      canvas.drawRect(rect, Paint()..color = color);
+    }
+    
+  }
+  
+  @override
+  bool shouldRepaint(covariant DrawSquareDots oldDelegate) {
+    return !listEquals(oldDelegate.dots, dots);
   }
 }
