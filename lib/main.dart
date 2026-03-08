@@ -42,8 +42,8 @@ class _TheRealmState extends State<TheRealm> {
 
   @override
   void initState() {
-    timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      depth += 0.1;
+    timer = Timer.periodic(Duration(milliseconds: (1000/60).floor()), (timer) {
+      depth += 1/60;
       if(depth >= 10) {
         timer.cancel();
         return;
