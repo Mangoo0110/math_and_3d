@@ -47,16 +47,29 @@ class _TheRealmState extends State<TheRealm> {
 
 
   List<Vec3> threeDpoints = [
-    Vec3(.25, .25, 0.25),
-    Vec3(-.25, .25, 0.25),
-    Vec3(.25, -.25, 0.25),
-    Vec3(-.25, -.25, 0.25),
+    // Back face
+    Vec3(.25, .25, 0.25),  // bottom-right
+    Vec3(-.25, .25, 0.25), // bottom-left
+    Vec3(-.25, -.25, 0.25),// top-left
+    Vec3(.25, -.25, 0.25), // top-right
 
+    // Front face
     Vec3(.25, .25, -0.25),
     Vec3(-.25, .25, -0.25),
-    Vec3(.25, -.25, -0.25),
     Vec3(-.25, -.25, -0.25),
+    Vec3(.25, -.25, -0.25),
   ];
+
+  List<DrawLineValue> toDrawCubeLineValues(List<Vec2> points) {
+    List<DrawLineValue> lines = [];
+    for(int i = 0; i < points.length; i++) {
+      // join
+      if((i + 1) % 4 != 0) lines.add(DrawLineValue(from: points[i], to: points[(i + 1) % points.length]));
+      if((i + 1) % 4 == 0) lines.add(DrawLineValue(from: points[i], to: points[(i + 1) - 4]));
+      if(i + 4 < 8) lines.add(DrawLineValue(from: points[i], to: points[(i + 4)]));
+    }
+    return lines;
+  }
 
   List<SquareDotValue> toSquareDots(List<Vec2> points) {
     return points.map((e) => SquareDotValue(Vec2(e.x, e.y))).toList();
@@ -155,6 +168,13 @@ class _TheRealmState extends State<TheRealm> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final cubeCoordinatesInScreen = translateToScreenPoints(
+            project3dTo2dAll(
+              translateZ(
+                rotateXZ(threeDpoints, angle), 
+              dz),
+            ),
+          );
         return Scaffold(
           body: Container(
             color: Colors.black,
@@ -180,14 +200,14 @@ class _TheRealmState extends State<TheRealm> {
                 CustomPaint(
                   painter: DrawSquareDots(
                     dots: toSquareDots(
-                      translateToScreenPoints(
-                        project3dTo2dAll(
-                         translateZ(
-                            rotateXZ(threeDpoints, angle), 
-                         dz),
-                        ),
-                      ),
+                      cubeCoordinatesInScreen
                     ),
+                  ),
+                ),
+
+                CustomPaint(
+                  painter: DrawLines(
+                    lines: toDrawCubeLineValues(cubeCoordinatesInScreen),
                   ),
                 )
               ],
@@ -199,8 +219,6 @@ class _TheRealmState extends State<TheRealm> {
   }
   
 }
-
-
 
 /// Draws a rectangle point on screen
 Widget drawRectPoint(Vec2 point) {
@@ -303,10 +321,10 @@ class DrawSquareDots extends CustomPainter {
 
   final List<SquareDotValue> dots;
 
-  @override
+  @override 
   void paint(Canvas canvas, Size size) {
     for (var dot in dots) {
-      final double squareLen = 10;
+      final double squareLen = 1;
       final color = dot.color;
       final coordinate = dot.coordinate;
       final rect = Rect.fromLTWH(coordinate.x - squareLen/2, coordinate.y - squareLen/2, squareLen, squareLen);
@@ -318,5 +336,39 @@ class DrawSquareDots extends CustomPainter {
   @override
   bool shouldRepaint(covariant DrawSquareDots oldDelegate) {
     return !listEquals(oldDelegate.dots, dots);
+  }
+}
+
+class DrawLineValue {
+  const DrawLineValue({required this.from, required this.to, this.color = Colors.greenAccent});
+  final Vec2 from;
+  final Vec2 to;
+  final Color color;
+}
+
+class DrawLines extends CustomPainter {
+  const DrawLines({required this.lines});
+
+  final List<DrawLineValue> lines;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Offset toOffset(Vec2 coordinate) {
+      return Offset(coordinate.x, coordinate.y);
+    }
+    for (var line in lines) {
+      canvas.drawLine(
+        toOffset(line.from),
+        toOffset(line.to),
+        Paint()..color = line.color
+        ..strokeWidth = 5,
+      )
+      ;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant DrawLines oldDelegate,) {
+    return !listEquals(oldDelegate.lines, lines);
   }
 }
