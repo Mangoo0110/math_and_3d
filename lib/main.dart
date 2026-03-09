@@ -39,22 +39,23 @@ class TheRealm extends StatefulWidget {
 
 class _TheRealmState extends State<TheRealm> {
   Timer? timer;
-  static const int frameRate = 60;
-  double dz = 1/frameRate;
+  static const int fps = 60;
+  double dz = 1;
   double depth = 0;
+  double angle = 0;
 
 
 
   List<Vec3> threeDpoints = [
-    Vec3(.5, .5, 0.5),
-    Vec3(-.5, .5, 0.5),
-    Vec3(.5, -.5, 0.5),
-    Vec3(-.5, -.5, 0.5),
+    Vec3(.25, .25, 0.25),
+    Vec3(-.25, .25, 0.25),
+    Vec3(.25, -.25, 0.25),
+    Vec3(-.25, -.25, 0.25),
 
-    Vec3(.5, .5, -0.1),
-    Vec3(-.5, .5, -0.1),
-    Vec3(.5, -.5, -0.1),
-    Vec3(-.5, -.5, -0.1),
+    Vec3(.25, .25, -0.25),
+    Vec3(-.25, .25, -0.25),
+    Vec3(.25, -.25, -0.25),
+    Vec3(-.25, -.25, -0.25),
   ];
 
   List<SquareDotValue> toSquareDots(List<Vec2> points) {
@@ -66,10 +67,25 @@ class _TheRealmState extends State<TheRealm> {
   }
 
   List<Vec3> translateZ(List<Vec3> points, double dz) {
-    for (var e in points) {
-      e.z += dz;
-    }
-    return points;
+    return points.map((e) => Vec3(e.x, e.y, e.z + dz)).toList();
+  }
+
+  /// This rotates around the y axis on plane xz
+  // Formula:
+  // x' = x * cos(theta) - y * sin(theta)
+  // y' = y
+  // z' = x * sin(theta) + y + cos(theta)
+  List<Vec3> rotateXZ(List<Vec3> points, double angle) {
+    return points.map((e) {
+      final x = e.x;
+      final y = e.y;
+      final z = e.z;
+      return Vec3(
+        x * cos(angle) - z * sin(angle),
+        y,
+        x * sin(angle) + z * cos(angle)
+      );
+    }).toList();
   }
 
   // Simplified formula from: 3d: (x, y, z) => 2d: (x/z, y/z)
@@ -94,8 +110,11 @@ class _TheRealmState extends State<TheRealm> {
   Vec2 translateToScreenPoint(Vec2 coordinate) {
     // Assuming that coordinate values are between -1 and 1
     // (0,0) is the middle point of the plane
+    if(coordinate.x > 1 || coordinate.x < -1 || coordinate.y > 1 || coordinate.y < -1) {
+      debugPrint(coordinate.toString());
+    }
     return Vec2(
-      (1 - coordinate.x)/2 * widget.screenSize.width,
+      (coordinate.x + 1)/2 * widget.screenSize.width,
       (1 - coordinate.y)/2 * widget.screenSize.height
     );
   }
@@ -109,12 +128,16 @@ class _TheRealmState extends State<TheRealm> {
   @override
   void initState() {
     double frame = 0;
-    timer = Timer.periodic(Duration(milliseconds: (1000/60).floor()), (timer) {
+    final dt = 1/fps;
+    timer = Timer.periodic(Duration(milliseconds: (1000/fps).floor()), (timer) {
       frame += 1;
-      depth += dz;
-      if(frame >= frameRate * 3) {
-        return;
-      }
+      depth += dt;
+      //dz += dt;
+      angle += pi * dt;
+      // if(frame >= fps * 10) {
+      //   timer.cancel();
+      //   return;
+      // }
       setState(() {
         
       });
@@ -143,7 +166,7 @@ class _TheRealmState extends State<TheRealm> {
                 Positioned(
                   top: 10,
                   left: 0,
-                  child: Text((depth).toString(), style: const TextStyle(color: Colors.white),),
+                  child: Text((dz).toString(), style: const TextStyle(color: Colors.white),),
                 ),
                   Positioned(
                     left: widget.screenSize.width/2,
@@ -157,7 +180,13 @@ class _TheRealmState extends State<TheRealm> {
                 CustomPaint(
                   painter: DrawSquareDots(
                     dots: toSquareDots(
-                      translateToScreenPoints(project3dTo2dAll(translateZ(threeDpoints, dz))),
+                      translateToScreenPoints(
+                        project3dTo2dAll(
+                         translateZ(
+                            rotateXZ(threeDpoints, angle), 
+                         dz),
+                        ),
+                      ),
                     ),
                   ),
                 )
@@ -205,15 +234,18 @@ class Vec2{
 
   @override
   int get hashCode => x.hashCode ^ y.hashCode;
+
+  @override
+  String toString() => 'Vec2(x: $x, y: $y)';
 }
 
 /// 3 dimensional vector
 class Vec3{
   Vec3(this.x, this.y, this.z);
 
-  double x;
-  double y;
-  double z;
+  final double x;
+  final double y;
+  final double z;
 
   Vec3 operator +(Vec3 other) => Vec3(x + other.x, y + other.y, z + other.z);
   Vec3 operator -(Vec3 other)=> Vec3(x- other.x, y - other.y, z - other.z);
