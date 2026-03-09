@@ -9,4 +9,5 @@
 
 
 Inspiration🤗💌: 
-[Github](https://github.com/tsoding)
+[Alexey Kutepov](https://github.com/rexim)
+[Repo](https://github.com/tsoding/formula)
