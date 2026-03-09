@@ -9,3 +9,7 @@
 [screen-capture (3).webm](https://github.com/user-attachments/assets/382bb864-11fe-49f6-ac70-9852cf33bc15)
 
 
+
+Inspiration🤗💌: 
+[Alexey Kutepov](https://github.com/rexim)
+[Repo](https://github.com/tsoding/formula)
