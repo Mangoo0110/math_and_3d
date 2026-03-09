@@ -48,25 +48,30 @@ class _TheRealmState extends State<TheRealm> {
 
   List<Vec3> threeDpoints = [
     // Back face
-    Vec3(.25, .25, 0.25),  // bottom-right
-    Vec3(-.25, .25, 0.25), // bottom-left
-    Vec3(-.25, -.25, 0.25),// top-left
-    Vec3(.25, -.25, 0.25), // top-right
+    Vec3(.5, .5, 0.5),  // bottom-right
+    Vec3(-.5, .5, 0.5), // bottom-left
+    Vec3(-.5, -.5, 0.5),// top-left
+    Vec3(.5, -.5, 0.5), // top-right
 
     // Front face
-    Vec3(.25, .25, -0.25),
-    Vec3(-.25, .25, -0.25),
-    Vec3(-.25, -.25, -0.25),
-    Vec3(.25, -.25, -0.25),
+    Vec3(.5, .5, -0.5),
+    Vec3(-.5, .5, -0.5),
+    Vec3(-.5, -.5, -0.5),
+    Vec3(.5, -.5, -0.5),
   ];
 
   List<DrawLineValue> toDrawCubeLineValues(List<Vec2> points) {
     List<DrawLineValue> lines = [];
+    List<Color> colors = [
+      Colors.greenAccent,
+      Colors.greenAccent,
+      Colors.greenAccent,
+    ];
     for(int i = 0; i < points.length; i++) {
       // join
-      if((i + 1) % 4 != 0) lines.add(DrawLineValue(from: points[i], to: points[(i + 1) % points.length]));
-      if((i + 1) % 4 == 0) lines.add(DrawLineValue(from: points[i], to: points[(i + 1) - 4]));
-      if(i + 4 < 8) lines.add(DrawLineValue(from: points[i], to: points[(i + 4)]));
+      if((i + 1) % 4 != 0) lines.add(DrawLineValue(from: points[i], to: points[(i + 1) % points.length], color: colors[i % colors.length]));
+      if((i + 1) % 4 == 0) lines.add(DrawLineValue(from: points[i], to: points[(i + 1) - 4], color: colors[i % colors.length]));
+      if(i + 4 < 8) lines.add(DrawLineValue(from: points[i], to: points[(i + 4)], color: colors[i % colors.length]));
     }
     return lines;
   }
@@ -145,9 +150,9 @@ class _TheRealmState extends State<TheRealm> {
     timer = Timer.periodic(Duration(milliseconds: (1000/fps).floor()), (timer) {
       frame += 1;
       depth += dt;
-      //dz += dt;
+      if(frame < fps * 1.5) dz += dt;
       angle += pi * dt;
-      // if(frame >= fps * 10) {
+      // if(frame >= fps * 5) {
       //   timer.cancel();
       //   return;
       // }
@@ -361,7 +366,9 @@ class DrawLines extends CustomPainter {
         toOffset(line.from),
         toOffset(line.to),
         Paint()..color = line.color
-        ..strokeWidth = 5,
+        ..strokeWidth = 5
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round,
       )
       ;
     }
