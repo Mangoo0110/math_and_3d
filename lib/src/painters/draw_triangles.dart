@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:math_and_3d/core/math/vectors.dart';
+import 'package:math_and_3d/src/core/vectors/vectors.dart';
 
 class TriangleInfo {
   const TriangleInfo({required this.a, required this.b, required this.c, this.color = Colors.greenAccent});

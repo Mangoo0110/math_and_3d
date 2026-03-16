@@ -1,33 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:math_and_3d/components/draw_lines.dart';
-import 'package:math_and_3d/components/draw_triangles.dart';
-import 'package:math_and_3d/core/math/vectors.dart';
-import 'package:math_and_3d/transformer.dart';
+import 'package:math_and_3d/src/painters/draw_lines.dart';
+import 'package:math_and_3d/src/painters/draw_triangles.dart';
+import 'package:math_and_3d/src/core/vectors/vectors.dart';
+import 'package:math_and_3d/src/transformer/transformer.dart';
 
-class Cube extends Vec3Transformer {
-  Vec3 _a;
-  Vec3 _b;
-  Vec3 _c;
-  Vec3 _d;
-  Vec3 _e;
-  Vec3 _f;
-  Vec3 _g;
-  Vec3 _h;
+class Cube {
 
-  Cube(Vec3 a, Vec3 b, Vec3 c, Vec3 d, Vec3 e, Vec3 f, Vec3 g, Vec3 h):
-    _a = a,
-    _b = b,
-    _c = c,
-    _d = d,
-    _e = e,
-    _f = f,
-    _g = g,
-    _h = h,
-    super(vertices: [a, b, c, d, e, f, g, h]);
 
+  Cube(this.vertices);
+
+  final List<Vec3> vertices;
   
   List<TriangleInfo> cubeTriangles(Size screenSize) {
-    final cube2d = translateToScreenPoints(to2d(), screenSize);
+    final cube2d = Transformer.project3dTo2dAll(vertices);
 
     // Painter's algorithm: 
     // draw far triangles first, near triangles last.
@@ -46,9 +31,9 @@ class Cube extends Vec3Transformer {
         final triangles = tris3d
             .map(
               (t) => TriangleInfo(
-                a: cube2d[t.a],
-                b: cube2d[t.b],
-                c: cube2d[t.c],
+                a: cube2d[t.a].point,
+                b: cube2d[t.b].point,
+                c: cube2d[t.c].point,
                 color: t.color,
               ),
             )
@@ -59,17 +44,19 @@ class Cube extends Vec3Transformer {
 
   List<LineInfo> cubeLines(Size screenSize) {
     List<LineInfo> lines = [];
-    final points = projectScreen(screenSize);
+    final screenepoints = Transformer.translateToScreenPoints(
+      Transformer.project3dTo2dAll(vertices,), screenSize
+    );
     List<Color> colors = [
       Colors.greenAccent,
       Colors.greenAccent,
       Colors.greenAccent,
     ];
-    for(int i = 0; i < points.length; i++) {
+    for(int i = 0; i < screenepoints.length; i++) {
       // join
-      if((i + 1) % 4 != 0) lines.add(LineInfo(from: points[i], to: points[(i + 1) % points.length], color: colors[i % colors.length]));
-      if((i + 1) % 4 == 0) lines.add(LineInfo(from: points[i], to: points[(i + 1) - 4], color: colors[i % colors.length]));
-      if(i + 4 < 8) lines.add(LineInfo(from: points[i], to: points[(i + 4)], color: colors[i % colors.length]));
+      if((i + 1) % 4 != 0) lines.add(LineInfo(from: screenepoints[i], to: screenepoints[(i + 1) % screenepoints.length], color: colors[i % colors.length]));
+      if((i + 1) % 4 == 0) lines.add(LineInfo(from: screenepoints[i], to: screenepoints[(i + 1) - 4], color: colors[i % colors.length]));
+      if(i + 4 < 8) lines.add(LineInfo(from: screenepoints[i], to: screenepoints[(i + 4)], color: colors[i % colors.length]));
     }
     return lines;
   }

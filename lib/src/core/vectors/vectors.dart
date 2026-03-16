@@ -1,5 +1,10 @@
 import 'dart:math';
 
+import 'package:flutter/material.dart';
+
+import '../../transformer/transformer.dart';
+part 'parts/screen_vectors.dart';
+
 class Vec2 {
   Vec2(this.x, this.y);
 
@@ -56,7 +61,7 @@ class Vec3 {
     return Vec3(x, y + dy, z);
   }
 
-  Vec3 translateZ(double dz) {
+  Vec3  translateZ(double dz) {
     return Vec3(x, y, z + dz);
   }
 
@@ -83,10 +88,14 @@ class Vec3 {
 
   Vec3 rotateXY(double angle) {
     return Vec3(
-      x * cos(angle) - z * sin(angle),
-      x * sin(angle) + z * cos(angle),
-      z
+      x * cos(angle) - y * sin(angle),
+      x * sin(angle) + y * cos(angle),
+      z,
     );
+  }
+
+  Vec3 copyWith({double? x, double? y, double? z}) {
+    return Vec3(x ?? this.x, y ?? this.y, z ?? this.z);
   }
 }
 
