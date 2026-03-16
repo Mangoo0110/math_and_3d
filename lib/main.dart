@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:math_and_3d/core/themes/themes.dart';
+import 'package:math_and_3d/src/painters/draw_lines.dart';
+import 'package:math_and_3d/src/core/vectors/vectors.dart';
+import 'package:math_and_3d/src/core/themes/themes.dart';
+import 'package:math_and_3d/cube.dart';
+import 'package:math_and_3d/src/transformer/transformer.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,13 +19,33 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    
     return MaterialApp(
       title: 'Math And 3D',
+      debugShowCheckedModeBanner: false,
       theme: AppTheme().lightTheme,
       darkTheme: AppTheme().darkTheme,
       themeMode: ThemeMode.dark,
-      home: const TheRealm(
-        screenSize: Size(500, 400),
+      home: Scaffold(
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final realmWidth = 400.0;
+            final realmHeight = 350.0;
+            return TheRealm(
+              screenSize: Size(realmWidth, realmHeight),
+            );
+            // return SizedBox(
+            //   width: constraints.maxWidth,
+            //   child: Column(
+            //     children: List.generate((1).floor(), (index)=> Row(
+            //         children: List.generate((1).floor(), (index)=> TheRealm(
+            //           screenSize: Size(realmWidth, realmHeight),
+            //         ),),
+            //       ),)
+            //   ),
+            // );
+          }
+        ),
       ),
     );
   }
@@ -41,121 +64,103 @@ class _TheRealmState extends State<TheRealm> {
   Timer? timer;
   static const int fps = 60;
   double dz = 1;
-  double depth = 0;
   double angle = 0;
+  bool _paused = false;
+  bool _reversed = false;
 
 
-
-  List<Vec3> threeDpoints = [
-    // Back face
-    Vec3(.5, .5, 0.5),  // bottom-right
-    Vec3(-.5, .5, 0.5), // bottom-left
-    Vec3(-.5, -.5, 0.5),// top-left
-    Vec3(.5, -.5, 0.5), // top-right
-
-    // Front face
-    Vec3(.5, .5, -0.5),
-    Vec3(-.5, .5, -0.5),
-    Vec3(-.5, -.5, -0.5),
-    Vec3(.5, -.5, -0.5),
+  List<Vec3> theLine = [
+    Vec3(0, -1, 0),
+    Vec3(0, 1, 0),
   ];
 
-  List<DrawLineValue> toDrawCubeLineValues(List<Vec2> points) {
-    List<DrawLineValue> lines = [];
-    List<Color> colors = [
-      Colors.greenAccent,
-      Colors.greenAccent,
-      Colors.greenAccent,
-    ];
-    for(int i = 0; i < points.length; i++) {
-      // join
-      if((i + 1) % 4 != 0) lines.add(DrawLineValue(from: points[i], to: points[(i + 1) % points.length], color: colors[i % colors.length]));
-      if((i + 1) % 4 == 0) lines.add(DrawLineValue(from: points[i], to: points[(i + 1) - 4], color: colors[i % colors.length]));
-      if(i + 4 < 8) lines.add(DrawLineValue(from: points[i], to: points[(i + 4)], color: colors[i % colors.length]));
-    }
-    return lines;
+  List<Cube> cubeArmies = [
+    Cube([
+      Vec3(.5, .5, .5),  // bottom-right // a
+      Vec3(-.5, .5, .5), // bottom-left  // b
+      Vec3(-.5, -.5, .5),// top-left     // c
+      Vec3(.5, -.5, .5), // top-right    // d
+
+      // Front face coordinates/points
+      Vec3(.5, .5, -.5), // bottom-right // e
+      Vec3(-.5, .5, -.5),// bottom-left  // f
+      Vec3(-.5, -.5, -.5),// top-left     // g
+      Vec3(.5, -.5, -.5), // top-right    // h
+    ]),
+  ];
+
+  buildCubeArmies() {
+    //cubeArmies = [];
+    // // 10 columns and 10 rows; total 100 cubes; cube arms are size of 10
+    // for(int i = 0; i < 10; i++) {
+    //   for(int j = 0; j < 10; j++) {
+    //     cubeArmies.add(Cube([
+    //       Vec3(i * 10, j * 10, 0),  // bottom-right // a
+    //       Vec3((i + 1) * 10, j * 10, 0), // bottom-left  // b
+    //       Vec3((i + 1) * 10, (j + 1) * 10, 0),// top-left     // c
+    //       Vec3(i * 10, (j + 1) * 10, 0), // top-right    // d
+
+    //       // Front face coordinates/points
+    //       Vec3(i * 10, j * 10, -10), // bottom-right // e
+    //       Vec3((i + 1) * 10, j * 10, -10),// bottom-left  // f
+    //       Vec3((i + 1) * 10, (j + 1) * 10, -10),// top-left     // g
+    //       Vec3(i * 10, (j + 1) * 10, -10), // top-right    // h
+    //     ]));
+    //   }
+    //}
   }
 
-  List<SquareDotValue> toSquareDots(List<Vec2> points) {
-    return points.map((e) => SquareDotValue(Vec2(e.x, e.y))).toList();
-  }
-
-  List<Vec2> project3dTo2dAll(List<Vec3> points) {
-    return points.map((e) => project3dTo2d(e)).toList();
-  }
-
-  List<Vec3> translateZ(List<Vec3> points, double dz) {
-    return points.map((e) => Vec3(e.x, e.y, e.z + dz)).toList();
-  }
-
-  /// This rotates around the y axis on plane xz
-  // Formula:
-  // x' = x * cos(theta) - y * sin(theta)
-  // y' = y
-  // z' = x * sin(theta) + y + cos(theta)
-  List<Vec3> rotateXZ(List<Vec3> points, double angle) {
-    return points.map((e) {
-      final x = e.x;
-      final y = e.y;
-      final z = e.z;
-      return Vec3(
-        x * cos(angle) - z * sin(angle),
-        y,
-        x * sin(angle) + z * cos(angle)
-      );
-    }).toList();
-  }
-
-  // Simplified formula from: 3d: (x, y, z) => 2d: (x/z, y/z)
-  // Which is essentially derived from similar triangle theorem
-  //
-  /// Below videos sources explains the formula behind 3d coordinates to 2d coordinates much better: 
-  /// https://youtu.be/eoXn6nwV694?si=hOaW5FIAczj45jzD
-  /// https://youtu.be/qjWkNZ0SXfo?si=gYZLzm_ht9McmHW7
-  ///
-  // More detailed formula is: 
-  // 3d: (x, y, z) => 2d: (x/(z * tan(theta)), y/(z * tan(theta))) 
-  //
-  // Here z is the depth or how far behind the object is from the screen.
-  // Minimum depth z is 0.1 to avoid division by zero
-  Vec2 project3dTo2d(Vec3 coooridanates) {
-    return Vec2(
-      coooridanates.x / coooridanates.z,
-      coooridanates.y / coooridanates.z
-    );
-  }
-
-  Vec2 translateToScreenPoint(Vec2 coordinate) {
-    // Assuming that coordinate values are between -1 and 1
-    // (0,0) is the middle point of the plane
-    if(coordinate.x > 1 || coordinate.x < -1 || coordinate.y > 1 || coordinate.y < -1) {
-      debugPrint(coordinate.toString());
-    }
-    return Vec2(
-      (coordinate.x + 1)/2 * widget.screenSize.width,
-      (1 - coordinate.y)/2 * widget.screenSize.height
-    );
-  }
-
-  List<Vec2> translateToScreenPoints(List<Vec2> coordinates) {
-    return coordinates.map((e) => translateToScreenPoint(e)).toList();
-  }
-
-
-
+  List<LineInfo> linesToDraw = [];
+  
+  final dt = 1/fps;
   @override
   void initState() {
+    buildCubeArmies();
+    
     double frame = 0;
-    final dt = 1/fps;
     timer = Timer.periodic(Duration(milliseconds: (1000/fps).floor()), (timer) {
-      frame += 1;
-      depth += dt;
-      if(frame < fps * 1.5) dz += dt;
-      angle += pi * dt;
-      // if(frame >= fps * 5) {
-      //   timer.cancel();
-      //   return;
-      // }
+      // Guard pause case;
+      if(_paused) return;
+
+      linesToDraw.clear();
+      //if(frame > 500) return;
+      if(!_reversed && frame < fps * 2) {
+        dz += dt;
+        frame++;
+      }
+
+      if(_reversed && frame != 0) {
+        dz -= dt;
+        frame--;
+      }
+      
+      // Next Angle
+      if(_reversed) {
+        angle -=  pi * dt;
+      } else {
+        angle +=  pi * dt;
+      }
+      // Normalizes angle
+      angle = angle % (2 * pi);
+
+      List<Vec3> translated = [];
+      for(Cube cube in cubeArmies) {
+        translated = Transformer.rotateXZ(cube.vertices, angle);
+        translated = Transformer.translateZ(translated, dz);
+      }
+      
+      linesToDraw += Cube(translated).cubeLines(widget.screenSize);
+      
+      final translatedLine = Transformer.translateZ(theLine, dz);
+      final linePointsOnScreen = Transformer.translateToScreenPoints(
+        // This trick makes the line take the given height and width of the environment
+        // (*not the screen size)
+        [
+          Transformer.project3dTo2dAll(translatedLine)[0].copyWith(point: Vec2(0, -1)),
+          Transformer.project3dTo2dAll(translatedLine)[1].copyWith(point: Vec2(0, 1)),
+        ], widget.screenSize);
+      linesToDraw.add(LineInfo(from: linePointsOnScreen[0], to: linePointsOnScreen[1], color: Colors.white));
+
       setState(() {
         
       });
@@ -171,211 +176,64 @@ class _TheRealmState extends State<TheRealm> {
 
   @override
   Widget build(BuildContext context) {
+    
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cubeCoordinatesInScreen = translateToScreenPoints(
-            project3dTo2dAll(
-              translateZ(
-                rotateXZ(threeDpoints, angle), 
-              dz),
-            ),
-          );
-        return Scaffold(
-          body: Container(
-            color: Colors.black,
-            height: widget.screenSize.height,
-            width: widget.screenSize.width,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Positioned(
-                  top: 10,
-                  left: 0,
-                  child: Text((dz).toString(), style: const TextStyle(color: Colors.white),),
-                ),
-                  Positioned(
-                    left: widget.screenSize.width/2,
-                    child: Container(
-                      height: widget.screenSize.height,
-                      width: 1,
-                      color: Colors.white,
-                    ),
-                  ),
-                    
-                CustomPaint(
-                  painter: DrawSquareDots(
-                    dots: toSquareDots(
-                      cubeCoordinatesInScreen
-                    ),
-                  ),
-                ),
-
-                CustomPaint(
+        return Container(
+          color: Colors.black,
+          height: widget.screenSize.height,
+          width: widget.screenSize.width,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              
+              // Positioned(
+              //   top: 10,
+              //   left: 0,
+              //   child: Text((dz).toString(), style: const TextStyle(color: Colors.white),),
+              // ),
+        
+              // Positioned(
+              //   top: 30,
+              //   left: 4,
+              //   child: SizedBox(
+                  
+              //     child: FilledButton(
+              //       onPressed: ()=> _reversed = !_reversed,
+              //       style: FilledButton.styleFrom(
+              //         backgroundColor: _reversed ? Colors.orange : Colors.blue,
+              //         shape: RoundedRectangleBorder(
+              //           borderRadius: BorderRadius.circular(6),
+              //         ),
+              //       ),
+              //       child: Padding(
+              //         padding: const EdgeInsets.all(8.0),
+              //         child: const Text('Reverse', style: TextStyle(color: Colors.white),),
+              //       ),),
+              //   ),
+              // ),
+              
+        
+              // CustomPaint(
+              //   painter: DrawTriangles(
+              //     triangles: cubeArmies.map((cube) => cube.cubeTriangles(widget.screenSize)).toList().expand((element) => element).toList(),
+              //   ),
+              // )
+              GestureDetector(
+                onTap: () => _paused = !_paused,
+                child: CustomPaint(
                   painter: DrawLines(
-                    lines: toDrawCubeLineValues(cubeCoordinatesInScreen),
+                    lines: linesToDraw,
                   ),
-                )
-              ],
-            ),
-          )
+                ),
+              ),
+        
+              
+            ],
+          ),
         );
       },
     );
   }
   
-}
-
-/// Draws a rectangle point on screen
-Widget drawRectPoint(Vec2 point) {
-  return CustomPaint(
-    painter: SquareDotPainter(coordinate: point),
-  );
-}
-
-
-/// Normalized vector value from -1..1
-/// 
-/// This is our `point of view`
-/// If a point is (0, 0) it is in the middle of the screen.
-class Vec2{
-  Vec2(this.x, this.y);
-
-  final double x;
-  final double y;
-
-  Vec2 operator +(Vec2 other) => Vec2(x + other.x, y + other.y);
-  Vec2 operator -(Vec2 other)=> Vec2(x- other.x, y - other.y);
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) 
-      && other is Vec2
-      &&  runtimeType ==  other.runtimeType
-      && x == other.x
-      && y == other.y;
-  }
-
-  @override
-  int get hashCode => x.hashCode ^ y.hashCode;
-
-  @override
-  String toString() => 'Vec2(x: $x, y: $y)';
-}
-
-/// 3 dimensional vector
-class Vec3{
-  Vec3(this.x, this.y, this.z);
-
-  final double x;
-  final double y;
-  final double z;
-
-  Vec3 operator +(Vec3 other) => Vec3(x + other.x, y + other.y, z + other.z);
-  Vec3 operator -(Vec3 other)=> Vec3(x- other.x, y - other.y, z - other.z);
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) 
-      && other is Vec3
-      && runtimeType ==  other.runtimeType
-      && x == other.x
-      && y == other.y
-      && z == other.z;
-  }
-
-  @override
-  int get hashCode => x.hashCode ^ y.hashCode ^ z.hashCode;
-}
-
-
-
-class SquareDotPainter extends CustomPainter {
-  const SquareDotPainter({this.color = Colors.greenAccent, required this.coordinate});
-
-  final Color color;
-  final Vec2 coordinate;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double squareLen = 10;
-    final rect = Rect.fromLTWH(
-      coordinate.x - squareLen / 2,
-      coordinate.y - squareLen / 2,
-      squareLen,
-      squareLen,
-    );
-    canvas.drawRect(rect, Paint()..color = color);
-  }
-  
-  @override
-  bool shouldRepaint(covariant SquareDotPainter oldDelegate) {
-    return color != oldDelegate.color || coordinate != oldDelegate.coordinate;
-  }
-}
-
-
-
-class SquareDotValue {
-  final Vec2 coordinate;
-  final Color color;
-  SquareDotValue(this.coordinate, [this.color = Colors.greenAccent]);
-}
-
-class DrawSquareDots extends CustomPainter {
-  const DrawSquareDots({required this.dots});
-
-  final List<SquareDotValue> dots;
-
-  @override 
-  void paint(Canvas canvas, Size size) {
-    for (var dot in dots) {
-      final double squareLen = 1;
-      final color = dot.color;
-      final coordinate = dot.coordinate;
-      final rect = Rect.fromLTWH(coordinate.x - squareLen/2, coordinate.y - squareLen/2, squareLen, squareLen);
-      canvas.drawRect(rect, Paint()..color = color);
-    }
-    
-  }
-  
-  @override
-  bool shouldRepaint(covariant DrawSquareDots oldDelegate) {
-    return !listEquals(oldDelegate.dots, dots);
-  }
-}
-
-class DrawLineValue {
-  const DrawLineValue({required this.from, required this.to, this.color = Colors.greenAccent});
-  final Vec2 from;
-  final Vec2 to;
-  final Color color;
-}
-
-class DrawLines extends CustomPainter {
-  const DrawLines({required this.lines});
-
-  final List<DrawLineValue> lines;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    Offset toOffset(Vec2 coordinate) {
-      return Offset(coordinate.x, coordinate.y);
-    }
-    for (var line in lines) {
-      canvas.drawLine(
-        toOffset(line.from),
-        toOffset(line.to),
-        Paint()..color = line.color
-        ..strokeWidth = 5
-        ..strokeJoin = StrokeJoin.round
-        ..strokeCap = StrokeCap.round,
-      )
-      ;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant DrawLines oldDelegate,) {
-    return !listEquals(oldDelegate.lines, lines);
-  }
 }
