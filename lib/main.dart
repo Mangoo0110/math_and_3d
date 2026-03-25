@@ -6,6 +6,7 @@ import 'package:math_and_3d/src/painters/draw_lines.dart';
 import 'package:math_and_3d/src/core/vectors/vectors.dart';
 import 'package:math_and_3d/src/core/themes/themes.dart';
 import 'package:math_and_3d/cube.dart';
+import 'package:math_and_3d/src/physics/fluid_realm.dart';
 import 'package:math_and_3d/src/transformer/transformer.dart';
 
 void main() {
@@ -31,9 +32,10 @@ class MyApp extends StatelessWidget {
           builder: (context, constraints) {
             final realmWidth = 400.0;
             final realmHeight = 350.0;
-            return TheRealm(
-              screenSize: Size(realmWidth, realmHeight),
-            );
+            return FluidRealm(screenSize: Size(realmWidth, realmHeight));
+            // return TheRealm(
+            //   screenSize: Size(realmWidth, realmHeight),
+            // );
             // return SizedBox(
             //   width: constraints.maxWidth,
             //   child: Column(

@@ -13,6 +13,8 @@ class Vec2 {
 
   Vec2 operator +(Vec2 other) => Vec2(x + other.x, y + other.y);
   Vec2 operator -(Vec2 other) => Vec2(x - other.x, y - other.y);
+  Vec2 operator *(double scalar) => Vec2(x * scalar, y * scalar);
+  Vec2 operator /(double scalar) => Vec2(x / scalar, y / scalar);
 
   @override
   bool operator ==(Object other) {
@@ -36,6 +38,8 @@ class Vec3 {
 
   Vec3 operator +(Vec3 other) => Vec3(x + other.x, y + other.y, z + other.z);
   Vec3 operator -(Vec3 other) => Vec3(x - other.x, y - other.y, z - other.z);
+  Vec3 operator *(double scalar) => Vec3(x * scalar, y * scalar, z * scalar);
+  Vec3 operator /(double scalar) => Vec3(x / scalar, y / scalar, z / scalar);
 
   @override
   bool operator ==(Object other) {

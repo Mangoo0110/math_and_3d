@@ -5,8 +5,6 @@ import 'package:math_and_3d/src/core/vectors/vectors.dart';
 import 'package:math_and_3d/src/transformer/transformer.dart';
 
 class Cube {
-
-
   Cube(this.vertices);
 
   final List<Vec3> vertices;
