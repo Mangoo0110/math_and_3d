@@ -12,14 +12,15 @@ class PhysicsWorld2D {
   
   // Gravity pulls down (positive Y in Flutter). 
   // Scaled up to 980 for 2D screen pixels instead of 9.8 m/s^2.
-  Vec2 gravity = Vec2(0, 980); 
+  Vec2 gravity = Vec2(0, 0); 
 
   void addParticle(Particle2D particle) {
     particles.add(particle);
   }
 
   void update(double dt) {
-    for (var p in particles) {
+    for (int i = 0; i < particles.length; i++) {
+      final p = particles[i];
       // 1. Apply Forces
       // Assuming gravity is the only force for now
       p.acceleration = gravity;
@@ -31,43 +32,44 @@ class PhysicsWorld2D {
       // Position = Position + (Velocity * TimeDelta)
       p.position = p.position + (p.velocity * dt);
 
-      // 3. Handle boundary collisions
       _checkBoundaries(p);
+      for(int j = i + 1; j < particles.length; j++) {
+        // 3. Handle boundary collisions
 
-      // 4. Handle particle-particle collisions
-      _checkParticleCollisions(p);
+        // 4. Handle particle-particle collisions
+        _checkParticleCollisions(p, particles[j]);
+      }
+      
     }
   }
 
-  void _checkParticleCollisions(Particle2D p) {
-    for (var other in particles) {
-      if(p == other) continue; // Skip self
+  void _checkParticleCollisions(Particle2D p, Particle2D other) {
+    Vec2 delta = other.position - p.position;
+    double distance = sqrt(delta.x * delta.x + delta.y * delta.y);
+    double minDistance = p.radius + other.radius;
 
-      double dx = other.position.x - p.position.x;
-      double dy = other.position.y - p.position.y;
-      double distance = sqrt(dx * dx + dy * dy);
-      double minDistance = p.radius + other.radius;
+    if(distance < minDistance) {
+      // Particles are colliding. Let's resolve the collision by adjusting their velocities.
+      // Calculate the normal vector
+      final deltaVelocity = p.velocity - other.velocity;
+      final squaredDistance = distance * distance;
+      final totalMass = p.mass + other.mass;
 
-      if(distance < minDistance) {
-        // Particles are colliding. Let's resolve the collision by adjusting their velocities.
-        // Calculate the normal vector
+      // Calculate the dot product component once
+      double dotProd = deltaVelocity.dot(delta);
+      
 
-        final deltaVelocity = p.velocity - other.velocity;
-        final squaredDistance = distance * distance;
-        final totalMass = p.mass + other.mass;
+      // based on their respective opposing mass ratios.
+      final pImpulseScaler = (2 * other.mass / totalMass) * (dotProd / squaredDistance);
+      final otherImpulseScaler = (2 * p.mass / totalMass) * (dotProd / squaredDistance);
 
-        final impulseScaler =
-            (2 * other.mass / totalMass) *
-            ((deltaVelocity.dot(Vec2(dx, dy)) / squaredDistance));
-
-        p.velocity = p.velocity - Vec2(dx, dy) * impulseScaler;
-        other.velocity = other.velocity + Vec2(dx, dy) * impulseScaler;
-      }
+      p.velocity = p.velocity - delta * pImpulseScaler;
+      other.velocity = other.velocity + delta * otherImpulseScaler;
     }
   }
 
   void _checkBoundaries(Particle2D p) {
-    double restitution = 0.8; // Bounciness (0.0 to 1.0)
+    double restitution = 1; // Bounciness (0.0 to 1.0)
 
     // Floor
     if (p.position.y > box.height - p.radius) {
