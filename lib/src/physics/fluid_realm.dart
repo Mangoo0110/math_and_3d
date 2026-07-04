@@ -6,9 +6,25 @@ import 'particle_2d.dart';
 import 'physics_world_2d.dart';
 import '../painters/draw_particles_2d.dart';
 
+/// Rectangle box in 2D space, defined by its top-left corner and size.
+class Box2D {
+  Box2D({required this.position, required this.size});
+  /// Top-left corner of the box
+  Vec2 position; 
+  Size size; // Width and height of the box
+
+  double get width => size.width;
+  double get height => size.height;
+
+  Vec2 upRightCorner() => Vec2(position.x + size.width, position.y);
+  Vec2 upLeftCorner() => Vec2(position.x, position.y);
+  Vec2 downLeftCorner() => Vec2(position.x, position.y + size.height);
+  Vec2 downRightCorner() => Vec2(position.x + size.width, position.y + size.height);
+}
+
 class FluidRealm extends StatefulWidget {
-  const FluidRealm({super.key, required this.screenSize});
-  final Size screenSize;
+  const FluidRealm({super.key, required this.box});
+  final Box2D box;
 
   @override
   State<FluidRealm> createState() => _FluidRealmState();
@@ -19,24 +35,26 @@ class _FluidRealmState extends State<FluidRealm> with SingleTickerProviderStateM
   late final Ticker _ticker;
   double _lastTime = 0.0;
 
+  late final Box2D box;
+
+
   @override
   void initState() {
     super.initState();
-    
+    box = widget.box;
     // Initialize the physics world with boundaries
-    physicsWorld = PhysicsWorld2D(widget.screenSize);
+    physicsWorld = PhysicsWorld2D(widget.box);
 
     // Add some random particles to start
     final random = Random();
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 10; i++) {
         physicsWorld.addParticle(
           Particle2D(
-            position: Vec2(random.nextDouble() * widget.screenSize.width, random.nextDouble() * widget.screenSize.height / 2),
+            position: Vec2(random.nextDouble() * widget.box.width, random.nextDouble() * widget.box.height / 2),
             // Give them a random starting velocity so they scatter beautifully
             velocity: Vec2(random.nextDouble() * 400 - 200, random.nextDouble() * 400 - 200),
             acceleration: Vec2(0, 0),
-            radius: 8.0,
-            mass: 1.0,
+            radius: random.nextDouble() * 10 + 5, // Random radius between 5 and 15
             color: Colors.blue.withAlpha(200),
           ),
         );
@@ -69,10 +87,11 @@ class _FluidRealmState extends State<FluidRealm> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    // debugPrint('Building FluidRealm with ${physicsWorld.particles.length} particles');
     return Container(
       color: Colors.black,
-      width: widget.screenSize.width,
-      height: widget.screenSize.height,
+      width: widget.box.width,
+      height: widget.box.height,
       child: GestureDetector(
         onTapDown: (details) {
           // Interactive: Spawn a new particle wherever you click!
@@ -89,7 +108,7 @@ class _FluidRealmState extends State<FluidRealm> with SingleTickerProviderStateM
         child: CustomPaint(
           painter: DrawParticles2D(
             particles: physicsWorld.particles,
-            bounds: physicsWorld.bounds,
+            bounds: physicsWorld.box.size,
           ),
         ),
       ),

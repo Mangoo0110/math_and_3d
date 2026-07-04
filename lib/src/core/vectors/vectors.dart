@@ -16,6 +16,8 @@ class Vec2 {
   Vec2 operator *(double scalar) => Vec2(x * scalar, y * scalar);
   Vec2 operator /(double scalar) => Vec2(x / scalar, y / scalar);
 
+  double dot(Vec2 other) => x * other.x + y * other.y;
+
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||

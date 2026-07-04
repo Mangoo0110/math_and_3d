@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
           builder: (context, constraints) {
             final realmWidth = 400.0;
             final realmHeight = 350.0;
-            return FluidRealm(screenSize: Size(realmWidth, realmHeight));
+            return FluidRealm(box: Box2D(position: Vec2(0, 0), size: Size(realmWidth, realmHeight)));
             // return TheRealm(
             //   screenSize: Size(realmWidth, realmHeight),
             // );
