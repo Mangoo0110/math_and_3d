@@ -70,7 +70,13 @@ class _FluidRealmState extends State<FluidRealm> with SingleTickerProviderStateM
       if (dt > 0.05) dt = 0.05;
 
       // Update the physics engine
-      physicsWorld.update(dt);
+      // Improve collision detection by substepping
+      int subStep = 2;
+      final subDt = dt / subStep;
+      while(subStep > 0) {
+        physicsWorld.update(subDt);
+        subStep--;
+      }
       
       // Trigger a repaint
       setState(() {});
