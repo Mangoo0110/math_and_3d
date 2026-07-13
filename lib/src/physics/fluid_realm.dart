@@ -47,7 +47,7 @@ class _FluidRealmState extends State<FluidRealm> with SingleTickerProviderStateM
 
     // Add some random particles to start
     final random = Random();
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 500; i++) {
         physicsWorld.addParticle(
           Particle2D(
             position: Vec2(random.nextDouble() * widget.box.width, random.nextDouble() * widget.box.height),

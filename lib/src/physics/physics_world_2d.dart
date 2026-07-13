@@ -68,39 +68,6 @@ class PhysicsWorld2D {
     return distance;
   }
 
-  /// Returns position as Vec2
-  Vec2 _resonateOverlapping(Particle2D p, Particle2D other, double threshold, double dt) {
-    debugPrint("Resonating overlaps");
-
-    double left = 0, right = dt;
-    Particle2D p1 = p.copyWith();
-
-    // move particle `p` back to the position before dt
-    p1.position= p1.position - p1.velocity *dt;
-
-    int loopThreshold = 10;
-    
-    // Finding the right time interval
-    while((_isOverlapping(p, other, threshold) || _isNotInContact(p, other)) && loopThreshold > 0) {
-      final mid = (left + right) / 2;
-
-      final p2 = p1.copyWith();
-      // New position
-      Vec2 position1 =  p2.position + p1.velocity * mid;
-      if(_isOverlapping(p, other, threshold)) {
-        right = mid;
-      } else if(_isNotInContact(p, other)) {
-        left = mid;
-      } else {
-        return position1;
-      }
-      loopThreshold--;
-    }
-
-    return p.position;
-  }
-
-
   void _checkParticleCollisions(Particle2D p, Particle2D other, double dt) {
     Vec2 delta = other.position - p.position;
     double distance = sqrt(delta.x * delta.x + delta.y * delta.y);
@@ -115,13 +82,17 @@ class PhysicsWorld2D {
         // final lightest = p.mass > other.mass ? other : p;
         // final heaviest = p.mass < other.mass ? other : p;
         if(_isOverlapping(p, other, 1)) {
-          final resonatedPosition = _resonateOverlapping(p, other, 1, dt);
-          p.position = resonatedPosition;
-          // if(p.position == resonatedPosition) {
-          //   return;
-          // } else {
-          //   p.position = resonatedPosition;
-          // }
+          // collision axis
+          final Vec2 collisionAxis = p.position - other.position;
+          final dist = sqrt(p.position.x + p.position.x + p.position.y * p.position.y);
+
+          final normalizedVector = collisionAxis / dist;
+
+          final minDistance = (p.radius - other.radius).abs();
+          final delta = dist - minDistance;
+
+          p.position += normalizedVector * (0.5 * delta);
+          other.position -= normalizedVector * (0.5 * delta);
         }
         
       }
