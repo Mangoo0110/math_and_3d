@@ -21,6 +21,19 @@ class Particle2D {
 
   double get mass => radius * radius * 3.14; // Assuming mass is proportional to area (πr²) for simplicity.
 
+  Particle2D copyWith({
+    Vec2? position,
+    Vec2? velocity,
+    Vec2? acceleration,
+    double? radius
+  }) {
+    return Particle2D(
+      position: position ?? this.position,
+      velocity: velocity ?? this.velocity,
+      acceleration: acceleration ?? this.acceleration,
+    );
+  }
+
   @override
   operator ==(Object other) {
     if (identical(this, other)) return true;

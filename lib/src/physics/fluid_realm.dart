@@ -47,14 +47,14 @@ class _FluidRealmState extends State<FluidRealm> with SingleTickerProviderStateM
 
     // Add some random particles to start
     final random = Random();
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 100; i++) {
         physicsWorld.addParticle(
           Particle2D(
-            position: Vec2(random.nextDouble() * widget.box.width, random.nextDouble() * widget.box.height / 2),
+            position: Vec2(random.nextDouble() * widget.box.width, random.nextDouble() * widget.box.height),
             // Give them a random starting velocity so they scatter beautifully
-            velocity: Vec2(random.nextDouble() * 20 - 15, random.nextDouble() * 20 - 15),
+            velocity: Vec2(random.nextDouble() * 100 - 50, random.nextDouble() * 100 - 50),
             acceleration: Vec2(0, 0),
-            radius: random.nextDouble() * 10 + 5, // Random radius between 5 and 15
+            radius: random.nextDouble() * 2 + 5, // Random radius between 5 and 15
             color: Colors.blue.withAlpha(200),
           ),
         );
